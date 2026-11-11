@@ -16,11 +16,13 @@
     --cream-soft: #D9C9B4;
     --line: #E4D6C2;
     --line-dark: rgba(246,239,230,0.2);
+    --error: #A24A32;
     --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
     --sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
 
   *{box-sizing:border-box;}
+  [hidden]{display:none !important;}
   html{scroll-behavior:smooth;}
   body{
     margin:0;
@@ -210,7 +212,7 @@
   @keyframes draw-shroom{ to{ stroke-dashoffset:0; } }
   @media (prefers-reduced-motion: reduce){
     .shroom-line{animation:none; stroke-dashoffset:0;}
-    .btn, .card, .pillar, .proceso-node{transition:none;}
+    .btn, .card, .pillar, .proceso-node, .cart-panel, .cart-overlay{transition:none;}
   }
 
   /* ---------- El problema (banda oscura) ---------- */
@@ -377,7 +379,39 @@
     color:var(--green);
     min-height:1em;
   }
-  .card-feedback[data-state="error"]{color:#A24A32;}
+  .card-feedback[data-state="error"]{color:var(--error);}
+  .qty{
+    display:flex;
+    align-items:center;
+    border:1px solid var(--line);
+    border-radius:999px;
+    background:var(--paper);
+    flex-shrink:0;
+  }
+  .qty button{
+    background:none;
+    border:none;
+    width:34px;
+    height:38px;
+    font-size:1.1rem;
+    color:var(--ink);
+    cursor:pointer;
+    font-family:var(--sans);
+  }
+  .qty input{
+    width:34px;
+    border:none;
+    background:transparent;
+    text-align:center;
+    font-family:var(--sans);
+    font-size:0.95rem;
+    font-weight:600;
+    color:var(--ink);
+    -moz-appearance:textfield;
+    appearance:textfield;
+  }
+  .qty input::-webkit-outer-spin-button,
+  .qty input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
 
   /* ---------- Comunidad ---------- */
   .comunidad{padding:96px 0 100px; background:var(--paper-alt); border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
@@ -536,6 +570,46 @@
     font-family:var(--serif);
     font-size:1.15rem;
   }
+  .cart-view{display:flex; flex-direction:column; flex:1;}
+  .cart-checkout-btn{width:100%; margin-top:20px; text-align:center;}
+
+  /* ---------- Checkout (datos de envío) ---------- */
+  .checkout-form{display:flex; flex-direction:column; gap:14px;}
+  .checkout-form .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:0.85rem; font-weight:600; color:var(--ink);}
+  .field label small{font-weight:400; color:var(--ink-soft);}
+  .field input,
+  .field select,
+  .field textarea{
+    font-family:var(--sans);
+    font-size:0.95rem;
+    color:var(--ink);
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:9px 11px;
+    width:100%;
+  }
+  .field textarea{resize:vertical; min-height:60px;}
+  .field input[aria-invalid="true"],
+  .field select[aria-invalid="true"]{border-color:var(--error);}
+  .field-error{font-size:0.8rem; color:var(--error); margin:0; min-height:0;}
+  .field-error:empty{display:none;}
+  .field-check{display:flex; gap:10px; align-items:flex-start; font-size:0.88rem; color:var(--ink-soft);}
+  .field-check input{margin-top:4px; accent-color:var(--green);}
+  .field-check a{color:var(--green);}
+  .checkout-note{font-size:0.8rem; color:var(--ink-soft); margin:0; border-left:2px solid var(--line); padding-left:10px;}
+  .checkout-error{font-size:0.88rem; color:var(--error); margin:0;}
+  .checkout-error:empty{display:none;}
+  .checkout-actions{display:flex; flex-direction:column; gap:10px; margin-top:4px;}
+  .checkout-actions .btn{width:100%; text-align:center; padding:13px 24px;}
+  .btn:disabled{opacity:0.6; cursor:wait; transform:none;}
+  .checkout-ok{display:flex; flex-direction:column; gap:12px;}
+  .checkout-ok h4{font-family:var(--serif); font-size:1.3rem; margin:0; color:var(--green);}
+  .checkout-ok p{margin:0; color:var(--ink-soft); font-size:0.95rem;}
+  .checkout-ok strong{color:var(--ink);}
+  .footer-contact a + a{margin-left:14px;}
 
   /* ---------- Responsive ---------- */
   @media (max-width: 900px){
@@ -560,6 +634,8 @@
     .hero{padding:60px 0 56px;}
     .problema, .melena, .porque, .proceso, .producto, .comunidad, .ciencia, .nosotros, .cta-final{padding-top:60px; padding-bottom:60px;}
     .pillars{grid-template-columns:1fr;}
+    .card-footer{flex-wrap:wrap;}
+    .checkout-form .field-row{grid-template-columns:1fr;}
   }
 </style>
 </head>
@@ -577,7 +653,7 @@
         <li><a href="#nosotros">Nosotros</a></li>
         <li><a href="#comunidad" class="nav-cta">Comunidad</a></li>
       </ul>
-      <button type="button" class="cart-button" id="cart-toggle" aria-haspopup="true" aria-expanded="false">
+      <button type="button" class="cart-button" id="cart-toggle" aria-haspopup="dialog" aria-expanded="false" aria-label="Abrir carrito">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 4h2l2.4 12.4a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21 8H6" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="10" cy="21" r="1.3"></circle><circle cx="17" cy="21" r="1.3"></circle></svg>
         <span class="cart-count" id="cart-count">0</span>
       </button>
@@ -586,17 +662,126 @@
 </nav>
 
 <div class="cart-overlay" id="cart-overlay"></div>
-<aside class="cart-panel" id="cart-panel" aria-label="Carrito de compra">
+<aside class="cart-panel" id="cart-panel" role="dialog" aria-label="Carrito de compra" tabindex="-1">
   <div class="cart-panel-head">
-    <h3>Tu carrito</h3>
+    <h3 id="cart-title">Tu carrito</h3>
     <button type="button" class="cart-close" id="cart-close" aria-label="Cerrar carrito">&times;</button>
   </div>
-  <div class="cart-items" id="cart-items">
-    <p class="cart-empty" id="cart-empty">Tu carrito está vacío.</p>
+
+  <div class="cart-view" id="vista-carrito">
+    <div class="cart-items" id="cart-items">
+      <p class="cart-empty" id="cart-empty">Tu carrito está vacío.</p>
+    </div>
+    <div class="cart-total" id="cart-total" hidden>
+      <span>Total</span>
+      <span id="cart-total-amount">$0 MXN</span>
+    </div>
+    <button type="button" class="btn btn-primary cart-checkout-btn" id="ir-a-envio" hidden>Continuar con el envío</button>
   </div>
-  <div class="cart-total" id="cart-total" hidden>
-    <span>Total</span>
-    <span id="cart-total-amount">$0 MXN</span>
+
+  <div class="cart-view" id="vista-envio" hidden>
+    <form class="checkout-form" id="form-envio" novalidate>
+      <div class="field">
+        <label for="envio-nombre">Nombre completo</label>
+        <input id="envio-nombre" name="nombre_completo" autocomplete="name" required minlength="3" maxlength="80" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'\-]+">
+        <p class="field-error" data-error-for="nombre_completo"></p>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="envio-telefono">Teléfono <small>(10 dígitos)</small></label>
+          <input id="envio-telefono" name="telefono" type="tel" inputmode="numeric" autocomplete="tel-national" required maxlength="14">
+          <p class="field-error" data-error-for="telefono"></p>
+        </div>
+        <div class="field">
+          <label for="envio-correo">Correo</label>
+          <input id="envio-correo" name="correo" type="email" autocomplete="email" required maxlength="120">
+          <p class="field-error" data-error-for="correo"></p>
+        </div>
+      </div>
+      <div class="field">
+        <label for="envio-calle">Calle</label>
+        <input id="envio-calle" name="calle" autocomplete="address-line1" required minlength="2" maxlength="100">
+        <p class="field-error" data-error-for="calle"></p>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="envio-num-ext">Número exterior</label>
+          <input id="envio-num-ext" name="numero_exterior" required maxlength="10">
+          <p class="field-error" data-error-for="numero_exterior"></p>
+        </div>
+        <div class="field">
+          <label for="envio-num-int">Número interior <small>(opcional)</small></label>
+          <input id="envio-num-int" name="numero_interior" maxlength="10">
+          <p class="field-error" data-error-for="numero_interior"></p>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="envio-colonia">Colonia</label>
+          <input id="envio-colonia" name="colonia" autocomplete="address-level3" required minlength="2" maxlength="80">
+          <p class="field-error" data-error-for="colonia"></p>
+        </div>
+        <div class="field">
+          <label for="envio-cp">Código postal</label>
+          <input id="envio-cp" name="codigo_postal" inputmode="numeric" autocomplete="postal-code" required pattern="[0-9]{5}" maxlength="5">
+          <p class="field-error" data-error-for="codigo_postal"></p>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="envio-ciudad">Ciudad o municipio</label>
+          <input id="envio-ciudad" name="ciudad" autocomplete="address-level2" required minlength="2" maxlength="60" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ .'\-]+">
+          <p class="field-error" data-error-for="ciudad"></p>
+        </div>
+        <div class="field">
+          <label for="envio-estado">Estado</label>
+          <select id="envio-estado" name="estado" autocomplete="address-level1" required>
+            <option value="">Elige…</option>
+            <option>Aguascalientes</option><option>Baja California</option><option>Baja California Sur</option>
+            <option>Campeche</option><option>Chiapas</option><option>Chihuahua</option>
+            <option>Ciudad de México</option><option>Coahuila</option><option>Colima</option>
+            <option>Durango</option><option>Estado de México</option><option>Guanajuato</option>
+            <option>Guerrero</option><option>Hidalgo</option><option>Jalisco</option>
+            <option>Michoacán</option><option>Morelos</option><option>Nayarit</option>
+            <option>Nuevo León</option><option>Oaxaca</option><option>Puebla</option>
+            <option>Querétaro</option><option>Quintana Roo</option><option>San Luis Potosí</option>
+            <option>Sinaloa</option><option>Sonora</option><option>Tabasco</option>
+            <option>Tamaulipas</option><option>Tlaxcala</option><option>Veracruz</option>
+            <option>Yucatán</option><option>Zacatecas</option>
+          </select>
+          <p class="field-error" data-error-for="estado"></p>
+        </div>
+      </div>
+      <div class="field">
+        <label for="envio-referencias">Referencias <small>(opcional)</small></label>
+        <textarea id="envio-referencias" name="referencias" maxlength="200" placeholder="Entre qué calles, color de la casa…"></textarea>
+        <p class="field-error" data-error-for="referencias"></p>
+      </div>
+      <div class="field">
+        <label class="field-check">
+          <input type="checkbox" id="envio-aviso" name="acepta_aviso_privacidad" required>
+          <span>He leído y acepto el <a href="aviso-privacidad.html" target="_blank" rel="noopener">aviso de privacidad</a>.</span>
+        </label>
+        <p class="field-error" data-error-for="acepta_aviso_privacidad"></p>
+      </div>
+      <p class="checkout-note">Pago simulado: en esta etapa no se realiza ningún cobro ni se piden datos de tarjeta.</p>
+      <p class="checkout-error" id="checkout-error" role="alert"></p>
+      <div class="checkout-actions">
+        <button type="submit" class="btn btn-primary" id="confirmar-pedido">Confirmar pedido</button>
+        <button type="button" class="btn btn-ghost" id="volver-al-carrito">Volver al carrito</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="cart-view" id="vista-confirmacion" hidden>
+    <div class="checkout-ok" role="status">
+      <h4>¡Gracias por tu pedido!</h4>
+      <p>Pedido <strong id="ok-numero"></strong> confirmado.</p>
+      <p>Total: <strong id="ok-total"></strong></p>
+      <p>Pago simulado · Referencia <strong id="ok-referencia"></strong></p>
+      <p>Te escribiremos al correo que nos diste cuando tu pedido salga.</p>
+      <button type="button" class="btn btn-ghost" id="seguir-comprando">Seguir explorando</button>
+    </div>
   </div>
 </aside>
 
@@ -745,6 +930,11 @@
         <span class="fact">$300 MXN · 60 cápsulas</span>
         <p>Nuestra presentación más práctica para incorporarla a tu rutina diaria, sin preparación.</p>
         <div class="card-footer">
+          <div class="qty">
+            <button type="button" data-qty-menos aria-label="Quitar uno">−</button>
+            <input type="number" min="1" max="10" value="1" data-cantidad aria-label="Cantidad de cápsulas">
+            <button type="button" data-qty-mas aria-label="Agregar uno">+</button>
+          </div>
           <button type="button" class="btn-add-cart" data-add-to-cart>Agregar al carrito</button>
         </div>
         <p class="card-feedback" data-feedback></p>
@@ -754,6 +944,11 @@
         <span class="fact">$300 MXN · gramaje en definición</span>
         <p>Para quienes prefieren dosificar a su manera o combinarla en bebidas y recetas.</p>
         <div class="card-footer">
+          <div class="qty">
+            <button type="button" data-qty-menos aria-label="Quitar uno">−</button>
+            <input type="number" min="1" max="10" value="1" data-cantidad aria-label="Cantidad de polvo">
+            <button type="button" data-qty-mas aria-label="Agregar uno">+</button>
+          </div>
           <button type="button" class="btn-add-cart" data-add-to-cart>Agregar al carrito</button>
         </div>
         <p class="card-feedback" data-feedback></p>
@@ -883,7 +1078,7 @@
   <div class="wrap">
     <div class="footer-inner">
       <div class="footer-brand">MYKO</div>
-      <div class="footer-contact">Escríbenos a <a href="mailto:hola@myko.mx">hola@myko.mx</a></div>
+      <div class="footer-contact">Escríbenos a <a href="mailto:hola@myko.mx">hola@myko.mx</a> <a href="aviso-privacidad.html">Aviso de privacidad</a></div>
     </div>
     <p class="copyright">© 2026 MYKO. Todos los derechos reservados.</p>
   </div>
@@ -891,112 +1086,359 @@
 
 <script>
 (function(){
-  // URL del backend de carrito.py. Cámbiala cuando lo desplieguen fuera de tu máquina.
-  var API_URL = "http://localhost:5000/carrito/agregar";
+  // Backend (carrito.py + pedidos.py). Cambia API_BASE cuando lo desplieguen fuera de tu máquina.
+  var API_BASE = "http://localhost:5000";
+  var URL_AGREGAR = API_BASE + "/carrito/agregar";
+  var URL_PEDIDOS = API_BASE + "/pedidos";
 
-  // Mientras no exista login, simulamos un cliente y un carrito fijos para esta sesión del navegador.
-  var idCarrito = Math.floor(Math.random() * 100000);
-  var codigoCliente = Math.floor(Math.random() * 100000);
+  // sessionStorage puede fallar (modo privado, bloqueos); en ese caso todo vive solo en memoria.
+  function leerSesion(clave){
+    try { return JSON.parse(sessionStorage.getItem(clave)); } catch (e) { return null; }
+  }
+  function guardarSesion(clave, valor){
+    try { sessionStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+  }
+  function nuevoId(){
+    return Math.floor(Math.random() * 900000) + 100000;
+  }
 
-  var carrito = []; // Copia local para pintar el panel; la fuente de verdad es el backend.
+  // Mientras no exista login, simulamos un cliente y un carrito para esta sesión del navegador.
+  // Se conservan al recargar para no dejar carritos huérfanos en el backend.
+  var sesion = leerSesion("myko_sesion");
+  if (!sesion || typeof sesion.idCarrito !== "number" || typeof sesion.codigoCliente !== "number") {
+    sesion = { idCarrito: nuevoId(), codigoCliente: nuevoId() };
+  }
+  var carrito = leerSesion("myko_carrito"); // Copia local para pintar el panel; la fuente de verdad es el backend.
+  carrito = Array.isArray(carrito) ? carrito.filter(function(item){ return item && typeof item === "object"; }) : [];
+
+  function guardarEstado(){
+    guardarSesion("myko_sesion", sesion);
+    guardarSesion("myko_carrito", carrito);
+  }
 
   var cartToggle = document.getElementById("cart-toggle");
   var cartClose = document.getElementById("cart-close");
   var cartOverlay = document.getElementById("cart-overlay");
   var cartPanel = document.getElementById("cart-panel");
+  var cartTitle = document.getElementById("cart-title");
   var cartCount = document.getElementById("cart-count");
   var cartItemsEl = document.getElementById("cart-items");
   var cartEmptyEl = document.getElementById("cart-empty");
   var cartTotalEl = document.getElementById("cart-total");
   var cartTotalAmountEl = document.getElementById("cart-total-amount");
+  var irAEnvio = document.getElementById("ir-a-envio");
+  var formEnvio = document.getElementById("form-envio");
+  var botonConfirmar = document.getElementById("confirmar-pedido");
+  var checkoutError = document.getElementById("checkout-error");
+
+  var vistas = {
+    carrito: { el: document.getElementById("vista-carrito"), titulo: "Tu carrito" },
+    envio: { el: document.getElementById("vista-envio"), titulo: "Datos de envío" },
+    confirmacion: { el: document.getElementById("vista-confirmacion"), titulo: "Pedido confirmado" }
+  };
+
+  function mostrarVista(nombre){
+    Object.keys(vistas).forEach(function(clave){
+      vistas[clave].el.hidden = clave !== nombre;
+    });
+    cartTitle.textContent = vistas[nombre].titulo;
+    cartPanel.scrollTop = 0;
+  }
 
   function abrirCarrito(){
     cartPanel.classList.add("is-open");
     cartOverlay.classList.add("is-open");
     cartToggle.setAttribute("aria-expanded", "true");
+    cartPanel.focus();
   }
   function cerrarCarrito(){
     cartPanel.classList.remove("is-open");
     cartOverlay.classList.remove("is-open");
     cartToggle.setAttribute("aria-expanded", "false");
+    if (!vistas.confirmacion.el.hidden) mostrarVista("carrito");
+    cartToggle.focus();
   }
   cartToggle.addEventListener("click", abrirCarrito);
   cartClose.addEventListener("click", cerrarCarrito);
   cartOverlay.addEventListener("click", cerrarCarrito);
+  document.addEventListener("keydown", function(e){
+    if (e.key === "Escape" && cartPanel.classList.contains("is-open")) cerrarCarrito();
+  });
+
+  function formatoMXN(monto){
+    return "$" + monto.toFixed(2) + " MXN";
+  }
+
+  // El backend regresa un renglón por cada "agregar"; aquí se juntan por producto.
+  function agruparCarrito(){
+    var grupos = [];
+    var porNombre = Object.create(null);
+    carrito.forEach(function(item){
+      var nombre = String(item.nombre_producto);
+      if (!porNombre[nombre]) {
+        porNombre[nombre] = { nombre: nombre, cantidad: 0, monto: 0 };
+        grupos.push(porNombre[nombre]);
+      }
+      porNombre[nombre].cantidad += Number(item.cantidad) || 0;
+      porNombre[nombre].monto += Number(item.monto_total) || 0;
+    });
+    return grupos;
+  }
 
   function pintarCarrito(){
-    cartCount.textContent = carrito.length;
-
-    if (carrito.length === 0) {
-      cartEmptyEl.style.display = "block";
-      cartTotalEl.hidden = true;
-      cartItemsEl.innerHTML = "";
-      cartItemsEl.appendChild(cartEmptyEl);
-      return;
-    }
-
-    cartEmptyEl.style.display = "none";
-    cartItemsEl.innerHTML = "";
+    var grupos = agruparCarrito();
+    var piezas = 0;
     var total = 0;
 
-    carrito.forEach(function(item){
-      total += item.monto_total;
+    cartItemsEl.textContent = "";
+    grupos.forEach(function(grupo){
+      piezas += grupo.cantidad;
+      total += grupo.monto;
+
       var row = document.createElement("div");
       row.className = "cart-item";
-      row.innerHTML =
-        '<div><strong>' + item.nombre_producto + '</strong><span>Cantidad: ' + item.cantidad + '</span></div>' +
-        '<div class="cart-item-price">$' + item.monto_total.toFixed(2) + ' MXN</div>';
+      var info = document.createElement("div");
+      var nombre = document.createElement("strong");
+      nombre.textContent = grupo.nombre;
+      var cantidad = document.createElement("span");
+      cantidad.textContent = "Cantidad: " + grupo.cantidad;
+      info.appendChild(nombre);
+      info.appendChild(cantidad);
+      var precio = document.createElement("div");
+      precio.className = "cart-item-price";
+      precio.textContent = formatoMXN(grupo.monto);
+      row.appendChild(info);
+      row.appendChild(precio);
       cartItemsEl.appendChild(row);
     });
 
-    cartTotalEl.hidden = false;
-    cartTotalAmountEl.textContent = "$" + total.toFixed(2) + " MXN";
+    var vacio = grupos.length === 0;
+    if (vacio) cartItemsEl.appendChild(cartEmptyEl);
+    cartCount.textContent = piezas;
+    cartTotalEl.hidden = vacio;
+    irAEnvio.hidden = vacio;
+    cartTotalAmountEl.textContent = formatoMXN(total);
   }
 
   function mostrarFeedback(card, mensaje, estado){
     var feedback = card.querySelector("[data-feedback]");
     if (!feedback) return;
+    clearTimeout(feedback._temporizador);
     feedback.textContent = mensaje;
     feedback.setAttribute("data-state", estado);
+    if (estado === "success") {
+      feedback._temporizador = setTimeout(function(){ feedback.textContent = ""; }, 3000);
+    }
   }
 
+  // Distingue "no hay servidor" de "el servidor respondió algo que no es JSON".
+  function pedirJSON(url, cuerpo){
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cuerpo)
+    })
+      .catch(function(){ throw { tipo: "red" }; })
+      .then(function(res){
+        return res.json().then(
+          function(data){ return { ok: res.ok, data: data || {} }; },
+          function(){ throw { tipo: "formato" }; }
+        );
+      });
+  }
+  function mensajeDeFallo(fallo){
+    if (fallo && fallo.tipo === "red") return "No se pudo conectar con el servidor. ¿Está corriendo carrito.py?";
+    return "El servidor respondió con un error inesperado.";
+  }
+
+  // ---------- Cantidad ----------
+  function leerCantidad(input){
+    var n = parseInt(input.value, 10);
+    if (isNaN(n)) n = 1;
+    return Math.min(10, Math.max(1, n));
+  }
+  document.querySelectorAll(".qty").forEach(function(qty){
+    var input = qty.querySelector("[data-cantidad]");
+    qty.querySelector("[data-qty-menos]").addEventListener("click", function(){
+      input.value = Math.max(1, leerCantidad(input) - 1);
+    });
+    qty.querySelector("[data-qty-mas]").addEventListener("click", function(){
+      input.value = Math.min(10, leerCantidad(input) + 1);
+    });
+    input.addEventListener("change", function(){ input.value = leerCantidad(input); });
+  });
+
+  // ---------- Agregar al carrito ----------
   document.querySelectorAll("[data-add-to-cart]").forEach(function(boton){
     boton.addEventListener("click", function(){
       var card = boton.closest(".card");
       var numeroDeProducto = parseInt(card.getAttribute("data-producto-id"), 10);
+      var inputCantidad = card.querySelector("[data-cantidad]");
+      var cantidad = inputCantidad ? leerCantidad(inputCantidad) : 1;
 
       boton.disabled = true;
       mostrarFeedback(card, "Agregando…", "loading");
 
-      fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id_carrito: idCarrito,
-          codigo_de_cliente: codigoCliente,
-          numero_de_producto: numeroDeProducto,
-          cantidad: 1
-        })
+      pedirJSON(URL_AGREGAR, {
+        id_carrito: sesion.idCarrito,
+        codigo_de_cliente: sesion.codigoCliente,
+        numero_de_producto: numeroDeProducto,
+        cantidad: cantidad
       })
-        .then(function(res){
-          return res.json().then(function(data){ return { ok: res.ok, data: data }; });
-        })
         .then(function(resultado){
-          boton.disabled = false;
           if (!resultado.ok) {
             mostrarFeedback(card, resultado.data.error || "No se pudo agregar el producto.", "error");
             return;
           }
           carrito.push(resultado.data);
+          guardarEstado();
           pintarCarrito();
+          if (inputCantidad) inputCantidad.value = 1;
           mostrarFeedback(card, "Agregado al carrito", "success");
+          mostrarVista("carrito");
           abrirCarrito();
         })
-        .catch(function(){
-          boton.disabled = false;
-          mostrarFeedback(card, "No se pudo conectar con el servidor. ¿Está corriendo carrito.py?", "error");
-        });
+        .catch(function(fallo){
+          mostrarFeedback(card, mensajeDeFallo(fallo), "error");
+        })
+        .then(function(){ boton.disabled = false; });
     });
+  });
+
+  // ---------- Checkout: datos de envío ----------
+  // Mismos mensajes que pedidos.py; el backend valida con esquema_envio.json y tiene la última palabra.
+  var MENSAJES_CAMPO = {
+    nombre_completo: "Escribe tu nombre completo (solo letras).",
+    telefono: "El teléfono debe tener 10 dígitos.",
+    correo: "Escribe un correo válido.",
+    calle: "Escribe la calle.",
+    numero_exterior: "Escribe el número exterior.",
+    colonia: "Escribe la colonia.",
+    codigo_postal: "El código postal debe tener 5 dígitos.",
+    ciudad: "Escribe una ciudad válida (solo letras).",
+    estado: "Elige un estado de la lista.",
+    acepta_aviso_privacidad: "Debes aceptar el aviso de privacidad."
+  };
+  var CAMPOS_TEXTO = ["nombre_completo", "correo", "calle", "numero_exterior", "numero_interior",
+    "colonia", "codigo_postal", "ciudad", "estado", "referencias"];
+
+  function limpiarTelefono(valor){
+    return valor.replace(/[\s\-().]/g, "");
+  }
+
+  function limpiarErrores(){
+    formEnvio.querySelectorAll("[data-error-for]").forEach(function(p){ p.textContent = ""; });
+    formEnvio.querySelectorAll("[aria-invalid]").forEach(function(el){ el.removeAttribute("aria-invalid"); });
+    checkoutError.textContent = "";
+  }
+
+  function mostrarErroresCampo(errores){
+    var primero = null;
+    Object.keys(errores).forEach(function(campo){
+      var p = /^[a-z_]+$/.test(campo) && formEnvio.querySelector('[data-error-for="' + campo + '"]');
+      if (!p) {
+        checkoutError.textContent = errores[campo];
+        return;
+      }
+      p.textContent = errores[campo];
+      var control = formEnvio.elements[campo];
+      if (control) {
+        control.setAttribute("aria-invalid", "true");
+        if (!primero) primero = control;
+      }
+    });
+    if (primero) primero.focus();
+  }
+
+  function validarFormulario(){
+    var errores = {};
+    Array.prototype.forEach.call(formEnvio.elements, function(control){
+      if (!control.name || control.type === "checkbox" || control.tagName === "SELECT") return;
+      control.value = control.value.trim();
+    });
+    Array.prototype.forEach.call(formEnvio.elements, function(control){
+      if (!control.name || control.validity.valid) return;
+      if (control.validity.valueMissing && control.type !== "checkbox") {
+        errores[control.name] = "Este campo es obligatorio.";
+      } else {
+        errores[control.name] = MENSAJES_CAMPO[control.name] || "Dato no válido.";
+      }
+    });
+    var telefono = limpiarTelefono(formEnvio.elements.telefono.value);
+    if (telefono && !/^[0-9]{10}$/.test(telefono)) errores.telefono = MENSAJES_CAMPO.telefono;
+    return errores;
+  }
+
+  function construirPedido(){
+    var c = formEnvio.elements;
+    var envio = {};
+    CAMPOS_TEXTO.forEach(function(campo){
+      var valor = c[campo].value.trim();
+      if (valor) envio[campo] = valor;
+    });
+    var telefono = limpiarTelefono(c.telefono.value);
+    if (telefono) envio.telefono = telefono;
+    return {
+      id_carrito: sesion.idCarrito,
+      codigo_de_cliente: sesion.codigoCliente,
+      acepta_aviso_privacidad: c.acepta_aviso_privacidad.checked,
+      envio: envio
+    };
+  }
+
+  function mostrarConfirmacion(pedido){
+    document.getElementById("ok-numero").textContent = "#" + pedido.numero_pedido;
+    document.getElementById("ok-total").textContent = formatoMXN(Number(pedido.total) || 0);
+    document.getElementById("ok-referencia").textContent = pedido.referencia_pago;
+
+    // Pedido cerrado: empezamos un carrito nuevo.
+    carrito = [];
+    sesion = { idCarrito: nuevoId(), codigoCliente: sesion.codigoCliente };
+    guardarEstado();
+    formEnvio.reset();
+    pintarCarrito();
+    mostrarVista("confirmacion");
+  }
+
+  irAEnvio.addEventListener("click", function(){
+    limpiarErrores();
+    mostrarVista("envio");
+    formEnvio.elements.nombre_completo.focus();
+  });
+  document.getElementById("volver-al-carrito").addEventListener("click", function(){
+    mostrarVista("carrito");
+  });
+  document.getElementById("seguir-comprando").addEventListener("click", cerrarCarrito);
+
+  formEnvio.addEventListener("submit", function(e){
+    e.preventDefault();
+    limpiarErrores();
+
+    var errores = validarFormulario();
+    if (Object.keys(errores).length) {
+      mostrarErroresCampo(errores);
+      return;
+    }
+
+    botonConfirmar.disabled = true;
+    botonConfirmar.textContent = "Confirmando…";
+
+    pedirJSON(URL_PEDIDOS, construirPedido())
+      .then(function(resultado){
+        if (!resultado.ok) {
+          checkoutError.textContent = resultado.data.error || "No se pudo crear el pedido.";
+          if (resultado.data.errores) mostrarErroresCampo(resultado.data.errores);
+          return;
+        }
+        mostrarConfirmacion(resultado.data);
+      })
+      .catch(function(fallo){
+        checkoutError.textContent = mensajeDeFallo(fallo);
+      })
+      .then(function(){
+        botonConfirmar.disabled = false;
+        botonConfirmar.textContent = "Confirmar pedido";
+      });
   });
 
   pintarCarrito();
