@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: myko
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # Un solo worker: el carrito de prueba vive en la memoria del proceso (ver app.py).
+    startCommand: gunicorn app:app --workers 1 --threads 4 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7

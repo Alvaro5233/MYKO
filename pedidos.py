@@ -218,40 +218,7 @@ def registrar_pedidos(app, obtener_carrito, vaciar_carrito=None):
 # ---------- Modo de prueba sin carrito.py ----------
 
 if __name__ == "__main__":
-    app = Flask(__name__)
+    # La app de prueba (página + carrito en memoria + pedidos) vive en app.py.
+    from app import app
 
-    CATALOGO = {
-        101: ("Cápsulas Melena de León", 300),
-        102: ("Polvo Melena de León", 300),
-    }
-    CARRITOS = {}  # id_carrito -> lista de renglones, solo en memoria
-
-    @app.after_request
-    def permitir_cors(respuesta):
-        respuesta.headers["Access-Control-Allow-Origin"] = "*"
-        respuesta.headers["Access-Control-Allow-Headers"] = "Content-Type"
-        respuesta.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        return respuesta
-
-    @app.route("/carrito/agregar", methods=["POST"])
-    def agregar():
-        datos = request.get_json(silent=True) or {}
-        producto = CATALOGO.get(datos.get("numero_de_producto"))
-        cantidad = datos.get("cantidad")
-        if not producto:
-            return jsonify(error="Producto no encontrado."), 404
-        if not isinstance(cantidad, int) or not 1 <= cantidad <= 10:
-            return jsonify(error="La cantidad debe ser de 1 a 10."), 400
-        renglon = {
-            "numero_de_producto": datos["numero_de_producto"],
-            "nombre_producto": producto[0],
-            "cantidad": cantidad,
-            "monto_total": float(producto[1] * cantidad),
-        }
-        CARRITOS.setdefault(datos.get("id_carrito"), []).append(renglon)
-        return jsonify(renglon), 201
-
-    registrar_pedidos(app, CARRITOS.get, lambda id_carrito: CARRITOS.pop(id_carrito, None))
-    # Sin modo debug por defecto: en Codespaces el puerto queda público y el depurador
-    # de Flask permitiría ejecutar código. Actívalo solo en tu máquina con MYKO_DEBUG=1.
-    app.run(port=5000, debug=os.environ.get("MYKO_DEBUG") == "1")
+    app.run(port=int(os.environ.get("PORT", 5000)), debug=os.environ.get("MYKO_DEBUG") == "1")

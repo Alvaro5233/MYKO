@@ -1086,8 +1086,13 @@
 
 <script>
 (function(){
-  // Backend (carrito.py + pedidos.py). Cambia API_BASE cuando lo desplieguen fuera de tu máquina.
-  var API_BASE = "http://localhost:5000";
+  // Backend (app.py + pedidos.py). En Render la página y la API comparten origen ("").
+  // La copia en GitHub Pages no corre Python, así que usa la API de Render.
+  // Abierta como archivo (file://) o con python -m http.server, usa el backend local.
+  var URL_RENDER = "https://myko.onrender.com";
+  var API_BASE = location.hostname.slice(-10) === "github.io" ? URL_RENDER
+    : (location.protocol === "file:" || location.port === "8000") ? "http://localhost:5000"
+    : "";
   var URL_AGREGAR = API_BASE + "/carrito/agregar";
   var URL_PEDIDOS = API_BASE + "/pedidos";
 
@@ -1247,7 +1252,7 @@
       });
   }
   function mensajeDeFallo(fallo){
-    if (fallo && fallo.tipo === "red") return "No se pudo conectar con el servidor. ¿Está corriendo carrito.py?";
+    if (fallo && fallo.tipo === "red") return "No se pudo conectar con el servidor. Intenta de nuevo en unos segundos.";
     return "El servidor respondió con un error inesperado.";
   }
 
