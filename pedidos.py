@@ -20,11 +20,14 @@ import json
 import os
 import re
 import sqlite3
+import unicodedata
+import urllib.error
+import urllib.request
 import uuid
 from contextlib import closing
 from datetime import datetime, timezone
 
-from flask import Blueprint, Flask, jsonify, request
+from flask import Blueprint, jsonify, request
 from jsonschema import Draft202012Validator, FormatChecker
 
 CARPETA = os.path.dirname(os.path.abspath(__file__))
@@ -147,6 +150,12 @@ def crear_tablas():
             )""")
 
 
+def carrito_tiene_pedido(id_carrito):
+    with closing(conectar()) as con:
+        return con.execute(
+            "SELECT 1 FROM pedidos WHERE id_carrito = ?", (id_carrito,)).fetchone() is not None
+
+
 def guardar_pedido(datos, renglones, total, pago):
     envio = datos["envio"]
     ahora = datetime.now(timezone.utc).isoformat()
@@ -170,6 +179,72 @@ def guardar_pedido(datos, renglones, total, pago):
     return pedido_id
 
 
+# ---------- Código postal (API externa) ----------
+# Zippopotam.us: pública, sin clave. https://api.zippopotam.us/mx/06700
+# Solo sirve para SUGERIR estado y colonias en el formulario. Nunca bloquea un
+# pedido: si la API se cae, el cliente escribe a mano y el esquema valida igual.
+
+URL_API_CP = "https://api.zippopotam.us/mx/{}"
+ESTADOS = ESQUEMA["properties"]["envio"]["properties"]["estado"]["enum"]
+_CACHE_CP = {}
+
+
+def _normalizar_nombre(texto):
+    """'Querétaro De Arteaga' -> 'queretaro de arteaga' (sin acentos, minúsculas)."""
+    sin_acentos = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
+    return " ".join(sin_acentos.lower().split())
+
+
+# La API usa nombres oficiales o viejos que no coinciden con el enum del esquema.
+# Se mapea por NOMBRE y no por abreviatura: la API manda "CHP" (Chiapas) para
+# Coahuila (CP 25000, Saltillo), así que la abreviatura no es confiable.
+_ALIAS_ESTADO = {
+    "distrito federal": "Ciudad de México",
+    "mexico": "Estado de México",
+    "michoacan de ocampo": "Michoacán",
+    "veracruz llave": "Veracruz",
+    "veracruz de ignacio de la llave": "Veracruz",
+    "coahuila de zaragoza": "Coahuila",
+    "queretaro de arteaga": "Querétaro",
+}
+_ESTADO_POR_NOMBRE = {_normalizar_nombre(e): e for e in ESTADOS}
+_ESTADO_POR_NOMBRE.update(_ALIAS_ESTADO)
+
+
+def estado_del_esquema(nombre_api):
+    """Traduce el estado que manda la API a un valor del enum, o None si no lo reconoce."""
+    return _ESTADO_POR_NOMBRE.get(_normalizar_nombre(nombre_api or ""))
+
+
+def consultar_cp(cp):
+    """Regresa (status, cuerpo). 200 con estado/colonias, 404 si no existe, 502 si la API falla."""
+    if cp in _CACHE_CP:
+        return _CACHE_CP[cp]
+    try:
+        with urllib.request.urlopen(URL_API_CP.format(cp), timeout=4) as r:
+            datos = json.load(r)
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            resultado = (404, {"error": "No encontramos ese código postal."})
+            _CACHE_CP[cp] = resultado
+            return resultado
+        return 502, {"error": "No se pudo consultar el código postal."}
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        return 502, {"error": "No se pudo consultar el código postal."}
+
+    lugares = datos.get("places") or []
+    estados = {estado_del_esquema(l.get("state")) for l in lugares}
+    estados.discard(None)
+    resultado = (200, {
+        "codigo_postal": cp,
+        # Si el CP cae en dos estados o no reconocemos el nombre, no adivinamos.
+        "estado": estados.pop() if len(estados) == 1 else None,
+        "colonias": sorted({l["place name"] for l in lugares if l.get("place name")}),
+    })
+    _CACHE_CP[cp] = resultado
+    return resultado
+
+
 # ---------- Endpoint ----------
 
 def registrar_pedidos(app, obtener_carrito, vaciar_carrito=None):
@@ -187,6 +262,12 @@ def registrar_pedidos(app, obtener_carrito, vaciar_carrito=None):
         errores = traducir_errores(datos)
         if errores:
             return jsonify(error="Revisa los datos de envío.", errores=errores), 422
+
+        # Antes de ver si el carrito está vacío: después de un pedido el carrito se
+        # vacía, y un segundo envío (doble clic, reintento) decía "Tu carrito está
+        # vacío" en vez de avisar que el pedido ya existe.
+        if carrito_tiene_pedido(datos["id_carrito"]):
+            return jsonify(error="Este carrito ya tiene un pedido."), 409
 
         renglones = obtener_carrito(datos["id_carrito"]) or []
         if not renglones:
@@ -211,6 +292,13 @@ def registrar_pedidos(app, obtener_carrito, vaciar_carrito=None):
             estado_pago=pago["estado"],
             referencia_pago=pago["referencia"],
         ), 201
+
+    @bp.route("/codigo-postal/<cp>", methods=["GET"])
+    def codigo_postal(cp):
+        if not re.fullmatch(r"[0-9]{5}", cp):
+            return jsonify(error=MENSAJES_CAMPO["codigo_postal"]), 400
+        status, cuerpo = consultar_cp(cp)
+        return jsonify(cuerpo), status
 
     app.register_blueprint(bp)
 

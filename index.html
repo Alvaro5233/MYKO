@@ -596,6 +596,8 @@
   .field select[aria-invalid="true"]{border-color:var(--error);}
   .field-error{font-size:0.8rem; color:var(--error); margin:0; min-height:0;}
   .field-error:empty{display:none;}
+  .field-hint{font-size:0.8rem; color:var(--ink-soft); margin:0;}
+  .field-hint:empty{display:none;}
   .field-check{display:flex; gap:10px; align-items:flex-start; font-size:0.88rem; color:var(--ink-soft);}
   .field-check input{margin-top:4px; accent-color:var(--green);}
   .field-check a{color:var(--green);}
@@ -718,12 +720,14 @@
       <div class="field-row">
         <div class="field">
           <label for="envio-colonia">Colonia</label>
-          <input id="envio-colonia" name="colonia" autocomplete="address-level3" required minlength="2" maxlength="80">
+          <input id="envio-colonia" name="colonia" autocomplete="address-level3" required minlength="2" maxlength="80" list="colonias-sugeridas">
+          <datalist id="colonias-sugeridas"></datalist>
           <p class="field-error" data-error-for="colonia"></p>
         </div>
         <div class="field">
           <label for="envio-cp">Código postal</label>
-          <input id="envio-cp" name="codigo_postal" inputmode="numeric" autocomplete="postal-code" required pattern="[0-9]{5}" maxlength="5">
+          <input id="envio-cp" name="codigo_postal" inputmode="numeric" autocomplete="postal-code" required pattern="[0-9]{5}" maxlength="5" aria-describedby="cp-ayuda">
+          <p class="field-hint" id="cp-ayuda" aria-live="polite"></p>
           <p class="field-error" data-error-for="codigo_postal"></p>
         </div>
       </div>
@@ -1401,9 +1405,52 @@
     sesion = { idCarrito: nuevoId(), codigoCliente: sesion.codigoCliente };
     guardarEstado();
     formEnvio.reset();
+    ayudaCP.textContent = "";
+    listaColonias.textContent = "";
+    cpConsultado = "";
     pintarCarrito();
     mostrarVista("confirmacion");
   }
+
+  // ---------- Código postal: sugiere estado y colonias ----------
+  // Solo ayuda a llenar. Si la API externa falla, no bloquea nada: el cliente escribe
+  // a mano y pedidos.py valida igual con el esquema.
+  var inputCP = formEnvio.elements.codigo_postal;
+  var ayudaCP = document.getElementById("cp-ayuda");
+  var listaColonias = document.getElementById("colonias-sugeridas");
+  var cpConsultado = "";
+
+  function consultarCP(){
+    var cp = inputCP.value.trim();
+    if (!/^[0-9]{5}$/.test(cp) || cp === cpConsultado) return;
+    cpConsultado = cp;
+    ayudaCP.textContent = "Buscando tu código postal…";
+    fetch(API_BASE + "/codigo-postal/" + cp)
+      .then(function(res){ return res.json().then(function(data){ return { ok: res.ok, data: data }; }); })
+      .then(function(r){
+        if (inputCP.value.trim() !== cp) return; // el cliente ya escribió otro CP
+        if (!r.ok) {
+          ayudaCP.textContent = r.data && r.data.error ? r.data.error : "";
+          return;
+        }
+        listaColonias.textContent = "";
+        (r.data.colonias || []).forEach(function(nombre){
+          var opcion = document.createElement("option");
+          opcion.value = nombre;
+          listaColonias.appendChild(opcion);
+        });
+        var selectEstado = formEnvio.elements.estado;
+        var hayEstado = r.data.estado && Array.prototype.some.call(selectEstado.options, function(o){
+          return o.value === r.data.estado;
+        });
+        if (hayEstado) selectEstado.value = r.data.estado;
+        ayudaCP.textContent = hayEstado
+          ? "Estado: " + r.data.estado + ". Revisa que sea correcto."
+          : "";
+      })
+      .catch(function(){ ayudaCP.textContent = ""; cpConsultado = ""; });
+  }
+  inputCP.addEventListener("input", consultarCP);
 
   irAEnvio.addEventListener("click", function(){
     limpiarErrores();
