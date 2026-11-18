@@ -1093,7 +1093,7 @@
   // Backend (app.py + pedidos.py). En Render la página y la API comparten origen ("").
   // La copia en GitHub Pages no corre Python, así que usa la API de Render.
   // Abierta como archivo (file://) o con python -m http.server, usa el backend local.
-  var URL_RENDER = "https://myko.onrender.com";
+  var URL_RENDER = "https://myko-25t0.onrender.com";
   var API_BASE = location.hostname.slice(-10) === "github.io" ? URL_RENDER
     : (location.protocol === "file:" || location.port === "8000") ? "http://localhost:5000"
     : "";
